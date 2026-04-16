@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, Trash2, Calendar, DollarSign, Package, Download, Upload, TrendingUp, CheckCircle2, AlertCircle, Trash } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { DeliveryFee } from './types';
 
 export default function App() {
