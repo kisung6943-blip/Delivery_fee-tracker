@@ -1,0 +1,6 @@
+{
+  "name": "Delivery Fee Tracker",
+  "description": "A web app to track daily delivery fees and their payment status.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
