@@ -8,7 +8,10 @@ export default function App() {
     const saved = localStorage.getItem('deliveryFees');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        return Array.isArray(parsed) 
+          ? parsed.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+          : [];
       } catch (e) {
         return [];
       }
