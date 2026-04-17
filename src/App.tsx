@@ -19,14 +19,32 @@ export default function App() {
     return [];
   });
 
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    return new Date().toISOString().slice(0, 7); // "YYYY-MM"
+  });
+
+  const [monthlyTaxInvoices, setMonthlyTaxInvoices] = useState<Record<string, number>>(() => {
+    const saved = localStorage.getItem('monthlyTaxInvoices');
+    return saved ? JSON.parse(saved) : {};
+  });
+
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [isPaidInput, setIsPaidInput] = useState(false);
+  const [isEditingInvoice, setIsEditingInvoice] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('deliveryFees', JSON.stringify(entries));
   }, [entries]);
+
+  useEffect(() => {
+    localStorage.setItem('monthlyTaxInvoices', JSON.stringify(monthlyTaxInvoices));
+  }, [monthlyTaxInvoices]);
+
+  const filteredEntries = useMemo(() => {
+    return entries.filter(entry => entry.date.startsWith(selectedMonth));
+  }, [entries, selectedMonth]);
 
   const handleAddEntry = (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,7 +128,7 @@ export default function App() {
   };
 
   const { totalUnpaid, totalAmount, totalInvoiceIssued, hasUnpaid } = useMemo(() => {
-    return entries.reduce(
+    return filteredEntries.reduce(
       (acc, entry) => {
         acc.totalAmount += entry.amount;
         if (!entry.isPaid) {
@@ -124,7 +142,17 @@ export default function App() {
       },
       { totalUnpaid: 0, totalAmount: 0, totalInvoiceIssued: 0, hasUnpaid: false }
     );
-  }, [entries]);
+  }, [filteredEntries]);
+
+  const currentMonthInvoice = monthlyTaxInvoices[selectedMonth] || 0;
+
+  const handleUpdateInvoiceAmount = (val: string) => {
+    const num = parseInt(val, 10) || 0;
+    setMonthlyTaxInvoices(prev => ({
+      ...prev,
+      [selectedMonth]: num
+    }));
+  };
 
   const formatCurrency = (value: number) => {
     return `₩ ${value.toLocaleString('ko-KR')}`;
@@ -148,10 +176,19 @@ export default function App() {
             <h1 className="text-4xl font-extrabold tracking-tight gradient-text">
               Delivery Zen
             </h1>
-            <p className="text-slate-500 font-medium flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              스마트한 택배비 정산 파트너
-            </p>
+            <div className="flex items-center gap-4">
+              <p className="text-slate-500 font-medium flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                스마트한 택배비 정산 파트너
+              </p>
+              <div className="h-4 w-px bg-slate-200"></div>
+              <input 
+                type="month" 
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-xl px-3 py-1 text-sm font-bold text-slate-700 outline-none hover:border-indigo-300 transition-colors cursor-pointer shadow-sm"
+              />
+            </div>
           </motion.div>
 
           <motion.div 
@@ -176,33 +213,83 @@ export default function App() {
 
         {/* Dashboards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[
-            { label: '이번 달 누적 합계', value: totalAmount, color: 'text-slate-900', icon: <TrendingUp className="text-blue-500" /> },
-            { label: '미결제 금액', value: totalUnpaid, color: 'text-orange-500', icon: <AlertCircle className="text-orange-500" />, sub: '빠른 정산이 필요합니다' },
-            { label: '전자세금계산서 발행', value: totalInvoiceIssued, color: 'text-purple-600', icon: <CheckCircle2 className="text-purple-500" /> },
-          ].map((card, i) => (
-            <motion.div
-              key={card.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-              whileHover={{ y: -5 }}
-              className="glass-card rounded-[2rem] p-8 space-y-4"
-            >
-              <div className="flex items-center justify-between">
-                <div className="p-3 bg-white/50 rounded-2xl shadow-inner text-xl">
-                  {card.icon}
-                </div>
-                {card.sub && <span className="text-[10px] font-bold px-2 py-1 bg-orange-100 text-orange-600 rounded-full">{card.sub}</span>}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={{ y: -5 }}
+            className="glass-card rounded-[2rem] p-8 space-y-4"
+          >
+            <div className="flex items-center justify-between">
+              <div className="p-3 bg-white/50 rounded-2xl shadow-inner text-xl">
+                <TrendingUp className="text-blue-500" />
               </div>
-              <div>
-                <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest">{card.label}</h2>
-                <p className={`text-4xl font-extrabold mt-1 ${card.color}`}>
-                  {formatCurrency(card.value)}
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest">{selectedMonth.split('-')[1]}월 누적 합계</h2>
+              <p className="text-4xl font-extrabold mt-1 text-slate-900">
+                {formatCurrency(totalAmount)}
+              </p>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            whileHover={{ y: -5 }}
+            className="glass-card rounded-[2rem] p-8 space-y-4"
+          >
+            <div className="flex items-center justify-between">
+              <div className="p-3 bg-white/50 rounded-2xl shadow-inner text-xl">
+                <AlertCircle className="text-orange-500" />
+              </div>
+              {hasUnpaid && <span className="text-[10px] font-bold px-2 py-1 bg-orange-100 text-orange-600 rounded-full">빠른 정산이 필요합니다</span>}
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest">미결제 금액</h2>
+              <p className="text-4xl font-extrabold mt-1 text-orange-500">
+                {formatCurrency(totalUnpaid)}
+              </p>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            whileHover={{ y: -5 }}
+            className="glass-card rounded-[2rem] p-8 space-y-4 relative overflow-hidden"
+          >
+            <div className="flex items-center justify-between">
+              <div className="p-3 bg-white/50 rounded-2xl shadow-inner text-xl">
+                <CheckCircle2 className="text-purple-500" />
+              </div>
+              <button 
+                onClick={() => setIsEditingInvoice(!isEditingInvoice)}
+                className="text-[10px] font-black uppercase tracking-tight text-indigo-500 hover:text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg"
+              >
+                {isEditingInvoice ? '완료' : '금액 입력'}
+              </button>
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest">전자세금계산서 발행</h2>
+              {isEditingInvoice ? (
+                <input 
+                  autoFocus
+                  type="number"
+                  value={currentMonthInvoice || ''}
+                  onChange={(e) => handleUpdateInvoiceAmount(e.target.value)}
+                  onBlur={() => setIsEditingInvoice(false)}
+                  className="w-full text-3xl font-extrabold mt-1 text-purple-600 bg-transparent border-b-2 border-purple-200 outline-none"
+                  placeholder="0"
+                />
+              ) : (
+                <p className="text-4xl font-extrabold mt-1 text-purple-600">
+                  {formatCurrency(currentMonthInvoice)}
                 </p>
-              </div>
-            </motion.div>
-          ))}
+              )}
+            </div>
+          </motion.div>
         </div>
 
         {/* Main Interface */}
@@ -211,7 +298,7 @@ export default function App() {
             <h2 className="text-2xl font-black text-slate-800 flex items-center gap-3">
               거래 내역 상세
               <span className="text-sm font-bold px-3 py-1 bg-white border border-slate-200 rounded-full text-slate-400">
-                {entries.length}건
+                {filteredEntries.length}건
               </span>
             </h2>
             <motion.button
@@ -292,7 +379,7 @@ export default function App() {
             {/* Table Body */}
             <div className="min-h-[400px]">
               <AnimatePresence mode="popLayout">
-                {entries.length === 0 ? (
+                {filteredEntries.length === 0 ? (
                   <motion.div 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -302,13 +389,13 @@ export default function App() {
                       <Package size={48} className="opacity-20" />
                     </div>
                     <div className="text-center">
-                      <p className="font-bold text-lg text-slate-400">등록된 내역이 없습니다</p>
+                      <p className="font-bold text-lg text-slate-400">이번 달 등록된 내역이 없습니다</p>
                       <p className="text-sm font-medium">새로운 거래를 추가하여 관리를 시작하세요</p>
                     </div>
                   </motion.div>
                 ) : (
                   <div className="divide-y divide-white/20">
-                    {entries.map((entry) => (
+                    {filteredEntries.map((entry) => (
                       <motion.div 
                         key={entry.id}
                         layout
