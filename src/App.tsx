@@ -38,7 +38,7 @@ export default function App() {
       isInvoiceIssued: false,
     };
 
-    setEntries([newEntry, ...entries].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    setEntries([newEntry, ...entries].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
     setAmount('');
     setDescription('');
     setIsPaidInput(false);
@@ -93,9 +93,9 @@ export default function App() {
               }
               return acc;
             }, []);
-            setEntries(combined.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+            setEntries(combined.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
           } else {
-            setEntries(json.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+            setEntries(json.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
           }
         }
       } catch (error) {
